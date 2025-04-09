@@ -26,11 +26,17 @@ jobs:
             exit 1
           fi
 
+      - name: Setup Node.js
+        if: env.lang == 'js'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
       - name: Set up Environment
         run: |
           if [ "$lang" = "js" ]; then
             echo "Setting up Node.js..."
-            curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
             npm install
           elif [ "$lang" = "python" ]; then
             echo "Setting up Python..."
