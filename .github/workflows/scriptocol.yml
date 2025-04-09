@@ -1,0 +1,77 @@
+name: Scriptocol CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test-and-analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Detect Language
+        id: detect-lang
+        run: |
+          if [ -f "package.json" ]; then
+            echo "lang=js" >> $GITHUB_ENV
+          elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+            echo "lang=python" >> $GITHUB_ENV
+          elif [ -f "go.mod" ]; then
+            echo "lang=go" >> $GITHUB_ENV
+          else
+            echo "Unsupported language"
+            exit 1
+          fi
+
+      - name: Set up Environment
+        run: |
+          if [ "$lang" = "js" ]; then
+            echo "Setting up Node.js..."
+            curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
+            npm install
+          elif [ "$lang" = "python" ]; then
+            echo "Setting up Python..."
+            python -m venv venv && source venv/bin/activate
+            pip install -r requirements.txt
+          elif [ "$lang" = "go" ]; then
+            echo "Setting up Go..."
+            wget https://go.dev/dl/go1.21.1.linux-amd64.tar.gz
+            tar -C /usr/local -xzf go1.21.1.linux-amd64.tar.gz
+            export PATH=$PATH:/usr/local/go/bin
+            go mod tidy
+          fi
+
+      - name: Run Tests
+        run: |
+          if [ "$lang" = "js" ]; then
+            npm test || echo "Tests failed, proceeding to AI fix mode"
+          elif [ "$lang" = "python" ]; then
+            pytest || echo "Tests failed, proceeding to AI fix mode"
+          elif [ "$lang" = "go" ]; then
+            go test ./... || echo "Tests failed, proceeding to AI fix mode"
+          fi
+
+      - name: Trigger Scriptocol Fixes
+        run: |
+          curl -X POST "https://your-scriptocol-server.com/api/analyze" \
+          -H "Authorization: Bearer ${{ secrets.SCRIPTOCOL_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{ "repo": "${{ github.repository }}", "pr": "${{ github.event.pull_request.number }}", "lang": "${{ env.lang }}" }'
+
+      - name: Post Fix Summary as PR Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('scriptocol-summary.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
