@@ -9,6 +9,7 @@ An AI-powered GitHub repository analyzer that automatically detects bugs and sug
 - **Automated Fixes**: Can automatically create pull requests with suggested fixes
 - **Multi-Language Support**: Works with JavaScript, Python, and Go repositories
 - **Priority-based Issues**: Categorizes issues by severity (high, medium, low)
+![Screenshot 2025-04-09 045526](https://github.com/user-attachments/assets/d6ba7cbb-45e5-4ab5-b738-272533d38863)
 
 ## Tech Stack
 
